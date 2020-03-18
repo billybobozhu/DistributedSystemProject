@@ -8,4 +8,7 @@ const (
 
 	//SLAVE identifies this node is a slave
 	SLAVE identityType = 1
+
+	//REPLICA identifies this node is a replica
+	REPLICA identityType = 2
 )

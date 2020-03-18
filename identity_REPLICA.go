@@ -7,32 +7,11 @@ import (
 	"os"
 )
 
-type slave struct {
+type replica struct {
 	capacity int
 }
 
-func (self *slave) requestAddr(filePath string, masterdestination string) string {
-	var destination string
-
-	info, err := os.Stat(filePath)
-	fmt.Println(err)
-
-	conn, err1 := net.Dial("tcp", "localhost:8989")
-	defer conn.Close()
-	fmt.Println(err1)
-
-	conn.Write([]byte(info.Name()))
-	buf := make([]byte, 1024*8)
-	n, err2 := conn.Read(buf)
-	fmt.Println(err2)
-
-	fmt.Println("get address", n)
-	destination = string(buf[:n])
-
-	return destination
-}
-
-func (self *slave) CreateFile(fileName string, content []byte) error {
+func (self *replica) CreateFile1(fileName string, content []byte) error {
 	file, err := os.Create(fileName)
 	if err != nil {
 		// fmt.Println(err)
@@ -52,12 +31,12 @@ func (self *slave) CreateFile(fileName string, content []byte) error {
 	return err
 }
 
-func (self *slave) DeleteFile(fileName string) error {
+func (self *replica) DeleteFile1(fileName string) error {
 	err := os.Remove(fileName)
 	return err
 }
 
-func (self *slave) SendFile(filePath string, destination string) error {
+func (self *replica) SendFile1(filePath string, destination string) error {
 	info, err := os.Stat(filePath)
 	if err != nil {
 		// fmt.Println("os.Stat err = ", err)
@@ -81,12 +60,12 @@ func (self *slave) SendFile(filePath string, destination string) error {
 	}
 	if string(buf[:n]) == "ok" {
 		fmt.Println("Filename sent")
-		err = self.send(filePath, conn)
+		err = self.send1(filePath, conn)
 	}
 	return err
 }
 
-func (self *slave) send(filePath string, conn net.Conn) error {
+func (self *replica) send1(filePath string, conn net.Conn) error {
 	defer conn.Close()
 	file, err := os.Open(filePath)
 	defer file.Close()
@@ -108,7 +87,7 @@ func (self *slave) send(filePath string, conn net.Conn) error {
 	}
 }
 
-func (self *slave) Listen(port string) error {
+func (self *replica) Listen1(port string) error {
 	Server, err := net.Listen("tcp", port)
 	if err != nil {
 		// fmt.Println("net.Listen err =", err)
@@ -134,11 +113,11 @@ func (self *slave) Listen(port string) error {
 		// 返回ok
 		conn.Write([]byte("ok"))
 		// 接收文件,
-		err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
+		err = self.recv1(fmt.Sprintf("received_%s", fileName), conn)
 	}
 }
 
-func (self *slave) recv(fileName string, conn net.Conn) error {
+func (self *replica) recv1(fileName string, conn net.Conn) error {
 	defer conn.Close()
 	file, err := os.Create(fileName)
 	defer file.Close()
