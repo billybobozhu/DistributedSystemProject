@@ -31,7 +31,7 @@ func sendFile(path string, conn net.Conn) {
 func main() {
 	for {
 
-		fmt.Println("请输入一个全路径的文件,比如,D:\\a.jpg")
+		fmt.Println("PLS PROVIDE FULL PATH FILE,FOR EXAMPLE,D:\\a.jpg")
 		//  获取命令行参数
 		var path string
 		fmt.Scan(&path)
@@ -57,7 +57,7 @@ func main() {
 			return
 		}
 		if "ok" == string(buf[:n]) {
-			fmt.Println("成功")
+			fmt.Println("DONE")
 			sendFile(path, conn)
 		}
 		// 如果是ok,那么开启一个连接,发送文件

@@ -23,12 +23,12 @@ func revFile(fileName string, conn net.Conn) {
 		if err != nil {
 			fmt.Println("conn.Read err =", err)
 			if err == io.EOF {
-				fmt.Println("文件结束了", err)
+				fmt.Println("Transfer Finish", err)
 			}
 			return
 		}
 		if n == 0 {
-			fmt.Println("文件结束了", err)
+			fmt.Println("Transfer Finish", err)
 			return
 		}
 		fs.Write(buf[:n])
