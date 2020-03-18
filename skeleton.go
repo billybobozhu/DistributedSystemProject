@@ -6,6 +6,10 @@ import (
 )
 
 func main() {
+	var method string
+	fmt.Printf("What do you want? PLEASE KEY IN SEND OR RECEIVE ")
+	fmt.Scanln(&method) //Scanln 扫描来自标准输入的文本，将空格分隔的值依次存放到后续的参数内，直到碰到换行。
+	// fmt.Scanf("%s %s", &firstName, &lastName)    //Scanf与其类似，除了 Scanf 的第一个参数用作格式字符串，用来决定如何读取。
 
 	slave := NewNode(233, SLAVE)
 	master1 := NewNode(4096, MASTER)
@@ -30,10 +34,13 @@ func main() {
 	// 	replica.Run()
 	// 	wg.Done()
 	// }()
-	var destination string
-	destination = slave.requestAddr("hello.txt", "localhost:8989")
-	slave.SendFile("hello.txt", destination)
-
+	if method == "SEND" {
+		var destination string
+		destination = slave.requestAddr("hello.txt", "localhost:8989")
+		slave.SendFile("hello.txt", destination)
+	} else if method == "RECEIVE" {
+		fmt.Println("sorry currently we cannot support that")
+	}
 	// var content = []byte("OwO Hello I am some random file")
 	// client.CreateFile("hello.txt", content)
 	// client.DeleteFile("hello.txt")
