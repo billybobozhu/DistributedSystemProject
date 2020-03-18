@@ -15,18 +15,23 @@ func (self *slave) requestAddr(filePath string, masterdestination string) string
 	var destination string
 
 	info, err := os.Stat(filePath)
-	fmt.Println(err)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	conn, err1 := net.Dial("tcp", "localhost:8989")
 	defer conn.Close()
-	fmt.Println(err1)
+	if err1 != nil {
+		fmt.Println(err1)
+	}
 
 	conn.Write([]byte(info.Name()))
 	buf := make([]byte, 1024*8)
 	n, err2 := conn.Read(buf)
-	fmt.Println(err2)
-
-	fmt.Println("get address", n)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	fmt.Printf("The address of replica server is %s \n", buf[:n])
 	destination = string(buf[:n])
 
 	return destination
