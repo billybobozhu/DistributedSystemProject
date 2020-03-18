@@ -69,10 +69,14 @@ import "fmt"
 // }
 
 func main() {
-	client := NewNode(233)
-	go client.Run()
-	var content = []byte("OwO Hello I am some random file")
-	client.CreateFile("hello.txt", content)
+	client1 := NewNode(233)
+	fmt.Printf("client1 capacity: %d\n", client1.capacity)
+	go client1.Run()
+	client2 := NewNode(4096)
+	go client2.Run()
+
+	// var content = []byte("OwO Hello I am some random file")
+	// client.CreateFile("hello.txt", content)
 	// client.DeleteFile("hello.txt")
 
 	// var pause string
