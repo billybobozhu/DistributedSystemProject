@@ -14,7 +14,7 @@
 
 -File download.
 
-~~-Master provide replica location.
+~~-Master provide replica location.~~
 
 -replica server send back file.
 
