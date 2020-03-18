@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -35,7 +36,35 @@ func (self *slave) DeleteFile(fileName string) error {
 	return err
 }
 
-func (self *slave) SendFile(filePath string, conn net.Conn) error {
+func (self *slave) SendFile(filePath string, destination string) error {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		// fmt.Println("os.Stat err = ", err)
+		return err
+	}
+
+	conn, err1 := net.Dial("tcp", destination)
+	defer conn.Close()
+	if err1 != nil {
+		// fmt.Println("net.Dial err = ", err1)
+		return err1
+	}
+	conn.Write([]byte(info.Name()))
+	// 接受到是不是ok
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		return err2
+	}
+	if string(buf[:n]) == "ok" {
+		// fmt.Println("Filename sent")
+		err = self.send(filePath, conn)
+	}
+	return err
+}
+
+func (self *slave) send(filePath string, conn net.Conn) error {
 	defer conn.Close()
 	file, err := os.Open(filePath)
 	defer file.Close()
@@ -43,7 +72,7 @@ func (self *slave) SendFile(filePath string, conn net.Conn) error {
 		// fmt.Println("os.Open err = ", err)
 		return err
 	}
-	buf := make([]byte, 1024*10)
+	buf := make([]byte, 1024*8)
 	for {
 		//  打开之后读取文件
 		n, err := file.Read(buf)
@@ -57,7 +86,37 @@ func (self *slave) SendFile(filePath string, conn net.Conn) error {
 	}
 }
 
-func (self *slave) RecvFile(fileName string, conn net.Conn) error {
+func (self *slave) Listen(port string) error {
+	Server, err := net.Listen("tcp", port)
+	if err != nil {
+		// fmt.Println("net.Listen err =", err)
+		return err
+	}
+	defer Server.Close()
+	// 接受文件名
+	for {
+		conn, err := Server.Accept()
+		defer conn.Close()
+		if err != nil {
+			// fmt.Println("Server.Accept err =", err)
+			return err
+		}
+		buf := make([]byte, 1024)
+		n, err1 := conn.Read(buf)
+		if err1 != nil {
+			// fmt.Println("conn.Read err =", err1)
+			return err1
+		}
+		// 拿到了文件的名字
+		fileName := string(buf[:n])
+		// 返回ok
+		conn.Write([]byte("ok"))
+		// 接收文件,
+		err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
+	}
+}
+
+func (self *slave) recv(fileName string, conn net.Conn) error {
 	defer conn.Close()
 	file, err := os.Create(fileName)
 	defer file.Close()
