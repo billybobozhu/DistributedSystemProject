@@ -58,7 +58,7 @@ func (self *slave) SendFile(filePath string, destination string) error {
 		return err2
 	}
 	if string(buf[:n]) == "ok" {
-		// fmt.Println("Filename sent")
+		fmt.Println("Filename sent")
 		err = self.send(filePath, conn)
 	}
 	return err
@@ -137,6 +137,7 @@ func (self *slave) recv(fileName string, conn net.Conn) error {
 			// fmt.Println("conn.Read err =", err)
 			return err
 		}
+		fmt.Printf("%s: %s", fileName, buf[:n])
 		file.Write(buf[:n])
 	}
 }
