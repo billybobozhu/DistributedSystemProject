@@ -18,3 +18,11 @@
 
 -replica server send back file.
 
+# HOW TO USE
+
+1：CHANGE THE IP ADDRESS FROM LOCAL HOST TO ACTUAL ADDRESS ( THESE IP ADDRESS CAN BE FOUND IN node.go and identity_MASTER.go)
+
+2: RUN the .bat file
+
+3: OR go build . then run the exec file
+
