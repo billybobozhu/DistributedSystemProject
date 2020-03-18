@@ -108,13 +108,28 @@ func (self *replica) Listen1(port string) error {
 			// fmt.Println("conn.Read err =", err1)
 			return err1
 		}
-		// 拿到了文件的名字
+		// if string(buf[:n]) == "SEND" {
+
+		// n, err1 := conn.Read(buf)
+		// if err1 != nil {
+		// 	// fmt.Println("conn.Read err =", err1)
+		// 	return err1
+		// }
 		fileName := string(buf[:n])
 		// 返回ok
 		conn.Write([]byte("ok"))
 		// 接收文件,
 		err = self.recv1(fmt.Sprintf("received_%s", fileName), conn)
+		// } else if string(buf[:n]) == "RECEIVE" {
+		// n, err1 := conn.Read(buf)
+		// if err1 != nil {
+		// 	// fmt.Println("conn.Read err =", err1)
+		// 	return err1
+		// }
+		//fmt.Println("cannot do now")
+
 	}
+	// }
 }
 
 func (self *replica) recv1(fileName string, conn net.Conn) error {

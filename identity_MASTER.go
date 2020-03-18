@@ -40,7 +40,7 @@ func (self *master) DeleteFile(fileName string) error {
 
 func (self *master) Listen(port string) error {
 	var addr string
-	addr = "10.12.10.232:7878" //default replica server address
+	addr = "localhost:7878" //default replica server address
 	//TODO : SELECT REPLICA SERVER WITH LOWEST DELAY
 	Server, err := net.Listen("tcp", port)
 	if err != nil {
@@ -56,17 +56,43 @@ func (self *master) Listen(port string) error {
 			// fmt.Println("Server.Accept err =", err)
 			return err
 		}
-		buf := make([]byte, 1024*10)
+		buf := make([]byte, 1024)
 		n, err1 := conn.Read(buf)
 		if err1 != nil {
 			// fmt.Println("conn.Read err =", err1)
 			return err1
 		}
-		// get file name
-		fileName := string(buf[:n])
-		fmt.Printf("New file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
+		if string(buf[:n]) == "SEND" {
 
-		conn.Write([]byte(addr))
+			fmt.Println("Master Method : SEND")
+			conn.Write([]byte("ok"))
+			buf := make([]byte, 1024)
+			n, err1 := conn.Read(buf)
+			if err1 != nil {
+				// fmt.Println("conn.Read err =", err1)
+				return err1
+			}
+			fileName := string(buf[:n])
+			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
+			conn.Write([]byte(addr))
+
+		} else if string(buf[:n]) == "RECEIVE" {
+
+			fmt.Println("Master Method : RECEIVE")
+			conn.Write([]byte("ok"))
+			buf := make([]byte, 1024)
+			n, err1 := conn.Read(buf)
+			if err1 != nil {
+				// fmt.Println("conn.Read err =", err1)
+				return err1
+			}
+			fileName := string(buf[:n])
+			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
+			conn.Write([]byte(addr))
+
+		}
+		// get file name
+
 		// 接收文件,
 		// err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
 	}

@@ -5,37 +5,38 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 type slave struct {
 	capacity int
 }
 
-func (self *slave) requestAddr(filePath string, masterdestination string) string {
-	var destination string
+// func (self *slave) requestAddr(filePath string, masterdestination string) string {
+// 	var destination string
 
-	info, err := os.Stat(filePath)
-	if err != nil {
-		fmt.Println(err)
-	}
+// 	info, err := os.Stat(filePath)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
 
-	conn, err1 := net.Dial("tcp", "localhost:8989")
-	defer conn.Close()
-	if err1 != nil {
-		fmt.Println(err1)
-	}
+// 	conn, err1 := net.Dial("tcp", "localhost:8989")
+// 	defer conn.Close()
+// 	if err1 != nil {
+// 		fmt.Println(err1)
+// 	}
 
-	conn.Write([]byte(info.Name()))
-	buf := make([]byte, 1024*8)
-	n, err2 := conn.Read(buf)
-	if err2 != nil {
-		fmt.Println(err2)
-	}
-	fmt.Printf("The address of replica server is %s \n", buf[:n])
-	destination = string(buf[:n])
+// 	conn.Write([]byte(info.Name()))
+// 	buf := make([]byte, 1024*8)
+// 	n, err2 := conn.Read(buf)
+// 	if err2 != nil {
+// 		fmt.Println(err2)
+// 	}
+// 	fmt.Printf("The address of replica server is %s \n", buf[:n])
+// 	destination = string(buf[:n])
 
-	return destination
-}
+// 	return destination
+// }
 
 func (self *slave) CreateFile(fileName string, content []byte) error {
 	file, err := os.Create(fileName)
@@ -75,6 +76,7 @@ func (self *slave) SendFile(filePath string, destination string) error {
 		// fmt.Println("net.Dial err = ", err1)
 		return err1
 	}
+	// conn.Write([]byte("SEND"))
 	conn.Write([]byte(info.Name()))
 	// 接受到是不是ok
 	buf := make([]byte, 1024)
@@ -167,4 +169,112 @@ func (self *slave) recv(fileName string, conn net.Conn) error {
 		fmt.Printf("%s: %s", fileName, buf[:n])
 		file.Write(buf[:n])
 	}
+}
+
+func (self *slave) requestAddr(filePath string, masterdestination string) string {
+	var destination string
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn, err1 := net.Dial("tcp", "localhost:8989")
+	defer conn.Close()
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	conn.Write([]byte("SEND"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		conn.Write([]byte(info.Name()))
+
+		n, err2 := conn.Read(buf)
+		if err2 != nil {
+			// fmt.Println("conn.Read err = ", err2)
+			fmt.Println(err2)
+		}
+		fmt.Printf("The address of replica server is %s \n", buf[:n])
+		destination = string(buf[:n])
+
+	}
+	return destination
+
+}
+func (self *slave) requestReplica(filePath string, masterdestination string) string {
+	var destination string
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn, err1 := net.Dial("tcp", "localhost:8989")
+	defer conn.Close()
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	conn.Write([]byte("RECEIVE"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		conn.Write([]byte(info.Name()))
+		time.Sleep(2 * time.Second)
+		n, err2 := conn.Read(buf)
+		if err2 != nil {
+			// fmt.Println("conn.Read err = ", err2)
+			fmt.Println(err2)
+		}
+		fmt.Printf("The address of replica server is %s \n", buf[:n])
+		destination = string(buf[:n])
+
+	}
+	return destination
+
+}
+func (self *slave) requestFile(fileName string, destination string) bool {
+	//var destination string
+
+	info, err := os.Stat(fileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn, err1 := net.Dial("tcp", destination)
+	defer conn.Close()
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	conn.Write([]byte("RECEIVE"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		conn.Write([]byte(info.Name()))
+		time.Sleep(2 * time.Second)
+		// n, err2 := conn.Read(buf)
+		// if err2 != nil {
+		// 	// fmt.Println("conn.Read err = ", err2)
+		// 	fmt.Println(err2)
+		// }
+		self.recv(fmt.Sprintf("received_%s", fileName), conn)
+	}
+
+	return false
+
 }
