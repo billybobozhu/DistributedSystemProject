@@ -1,6 +1,7 @@
 package main
 
 import (
+	"container/list"
 	"fmt"
 	"io"
 	"net"
@@ -8,7 +9,8 @@ import (
 )
 
 type slave struct {
-	capacity int
+	capacity   int
+	neighbours *list.List
 }
 
 func (self *slave) CreateFile(fileName string, content []byte) error {
@@ -49,15 +51,17 @@ func (self *slave) SendFile(filePath string, destination string) error {
 		// fmt.Println("net.Dial err = ", err1)
 		return err1
 	}
-	conn.Write([]byte(info.Name()))
+	//Tell the other side this is going to send a file
+	conn.Write([]byte(FILE))
 	// 接受到是不是ok
 	buf := make([]byte, 1024)
 	n, err2 := conn.Read(buf)
 	if err2 != nil {
-		// fmt.Println("conn.Read err = ", err2)
+		debugPrintf("slave: SendFile conn.Read err = %s", err2)
 		return err2
 	}
 	if string(buf[:n]) == "ok" {
+		conn.Write([]byte(info.Name()))
 		fmt.Println("Filename sent")
 		err = self.send(filePath, conn)
 	}
@@ -86,34 +90,24 @@ func (self *slave) send(filePath string, conn net.Conn) error {
 	}
 }
 
-func (self *slave) Listen(port string) error {
-	Server, err := net.Listen("tcp", port)
+func (self *slave) RecvFile(conn net.Conn) error {
+	debugPrintf("slave: RecvFile from %s", conn.RemoteAddr().String())
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
 	if err != nil {
-		// fmt.Println("net.Listen err =", err)
 		return err
 	}
-	defer Server.Close()
-	// 接受文件名
-	for {
-		conn, err := Server.Accept()
-		defer conn.Close()
-		if err != nil {
-			// fmt.Println("Server.Accept err =", err)
-			return err
-		}
-		buf := make([]byte, 1024)
-		n, err1 := conn.Read(buf)
-		if err1 != nil {
-			// fmt.Println("conn.Read err =", err1)
-			return err1
-		}
-		// 拿到了文件的名字
-		fileName := string(buf[:n])
-		// 返回ok
-		conn.Write([]byte("ok"))
-		// 接收文件,
-		err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
+	// Received file name
+	fileName := string(buf[:n])
+	debugPrintf("slave received filename: %s\n", fileName)
+
+	// receive file
+	debugPrintf("slave: going to receive file %s from %s\n", fileName, conn.RemoteAddr().String())
+	if DEBUG {
+		fileName = fmt.Sprintf("receive_%s", fileName)
 	}
+	err = self.recv(fileName, conn)
+	return err
 }
 
 func (self *slave) recv(fileName string, conn net.Conn) error {
@@ -139,5 +133,54 @@ func (self *slave) recv(fileName string, conn net.Conn) error {
 		}
 		fmt.Printf("%s: %s", fileName, buf[:n])
 		file.Write(buf[:n])
+	}
+}
+
+func (self *slave) Listen(port string) error {
+	slaveListener, err := net.Listen("tcp", port)
+	debugPrintf("slave: listening %s\n", port)
+	if err != nil {
+		// fmt.Println("net.Listen err =", err)
+		return err
+	}
+	defer slaveListener.Close()
+
+	// Begin listening
+	for {
+		conn, err := slaveListener.Accept()
+		defer conn.Close()
+		if err != nil {
+			// fmt.Println("Server.Accept err =", err)
+			return err
+		}
+		buf := make([]byte, 1024)
+		n, err1 := conn.Read(buf)
+		if err1 != nil {
+			// fmt.Println("conn.Read err =", err1)
+			return err1
+		}
+		// Received message Type
+		recvMsgType := messageType(buf[:n])
+		debugPrintf("slave listener received message type: %s\n", recvMsgType)
+
+		// Reply ok
+		// conn.Write([]byte("ok"))
+
+		switch recvMsgType {
+
+		case HEARTBEAT:
+			go func() {
+				debugPrintf("slave: received HEARTBEAT from %s \n", conn.RemoteAddr().String())
+			}()
+
+		case FILE:
+			debugPrintf("slave: go RecvFile\n")
+			// receive file
+			go func(conn net.Conn) error {
+				err = self.RecvFile(conn)
+				return err
+			}(conn)
+		}
+
 	}
 }

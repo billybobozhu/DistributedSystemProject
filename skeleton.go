@@ -10,6 +10,8 @@ func main() {
 	client1 := NewNode(233, MASTER)
 	client2 := NewNode(4096, SLAVE)
 
+	client1.master.neighbours.PushBack("localhost:8900")
+
 	fmt.Printf("client1 capacity: %d\n", client1.capacity)
 
 	var wg sync.WaitGroup
