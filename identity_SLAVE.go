@@ -186,6 +186,11 @@ func (self *slave) requestAddr(filePath string, masterdestination string) string
 		fmt.Println(err1)
 	}
 	conn.Write([]byte("SEND"))
+
+	// var s string
+	// s = fmt.Sprintf("%s%s", "list_", info.Name())
+	// conn.Write([]byte(s))
+	// self.sendContentPage(s, "localhost:8989")
 	buf := make([]byte, 1024)
 	n, err2 := conn.Read(buf)
 	if err2 != nil {
@@ -285,6 +290,12 @@ func (self *slave) requestFile(fileName string, destination string) bool {
 		// self.recv(fmt.Sprintf("received_%s", info.Name()), conn)
 	}
 
+	return false
+
+}
+
+func (self *slave) sendContentPage(fileName string, destination string) bool {
+	self.SendFile(fileName, destination)
 	return false
 
 }

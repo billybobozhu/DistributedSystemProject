@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"strconv"
+	"strings"
 )
 
 type master struct {
@@ -65,10 +67,19 @@ func (self *master) DeleteFile(fileName string) error {
 
 func (self *master) Listen(port string) error {
 
+	var chunknum int
 	addressMap := make(map[string]string, 100)
+	//chunkMap := make(map[string]string, 100)
 	var addr string
+
+	balance1, _ := ioutil.ReadFile("storage1.txt")
+	balance2, _ := ioutil.ReadFile("storage2.txt")
+
+	load1, _ := strconv.Atoi(string(balance1))
+	load2, _ := strconv.Atoi(string(balance2))
+
 	//addr = "localhost:7878" //default replica server address
-	addr = "localhost:7880" //default replica1 server address
+	//addr = "localhost:7880" //default replica1 server address
 	//TODO : SELECT REPLICA SERVER WITH LOWEST DELAY
 	Server, err := net.Listen("tcp", port)
 	if err != nil {
@@ -91,8 +102,32 @@ func (self *master) Listen(port string) error {
 			return err1
 		}
 		if string(buf[:n]) == "SEND" {
+			// buf1 := make([]byte, 1024)
+			// n, err1 := conn.Read(buf1)
+			// if err1 != nil {
+			// 	// fmt.Println("conn.Read err =", err1)
+			// 	return err1
+			// }
+			// // 拿到了文件的名字
+			// fileName := string(buf[:n])
+			// self.recv(fileName, c)
+			if load1 >= load2 {
+				addr = "localhost:7878"
+				load1 = load1 - 1
+				file, _ := os.Create("storage1.txt")
+				file.Write([]byte(strconv.Itoa(load1)))
+				chunknum = chunknum + 1
 
-			fmt.Println("Master Method : SEND")
+			} else {
+				addr = "localhost:7880"
+				load2 = load2 - 1
+				file, _ := os.Create("storage2.txt")
+				file.Write([]byte(strconv.Itoa(load2)))
+				chunknum = chunknum + 1
+			}
+
+			fmt.Println("Master Method : SEND , Chunk Number: ", chunknum)
+
 			conn.Write([]byte("ok"))
 			buf := make([]byte, 1024)
 			n, err1 := conn.Read(buf)
@@ -101,6 +136,24 @@ func (self *master) Listen(port string) error {
 				return err1
 			}
 			fileName := string(buf[:n])
+			// var d string
+			// d = fmt.Sprintf("%s%s", "contentpage_", fileName)
+			ss := strings.Split(fileName, ",")
+			realname := ss[1]
+			var f string
+			f = fmt.Sprintf("%s%s", realname, "_content.txt")
+			if chunknum == 1 {
+
+				fileObj, _ := os.OpenFile(f, os.O_CREATE, 0644)
+				var d string
+				d = fmt.Sprintf("%s%s", realname, "\n")
+
+				fileObj.Write([]byte(d))
+			}
+			fileObj1, _ := os.OpenFile(f, os.O_APPEND, 0644)
+
+			fileObj1.Write([]byte(fileName))
+			fileObj1.Write([]byte("\n"))
 			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
 			conn.Write([]byte(addr))
 
@@ -146,5 +199,31 @@ func (self *master) Listen(port string) error {
 
 		// 接收文件,
 		// err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
+	}
+}
+
+func (self *master) recv(fileName string, conn net.Conn) error {
+	defer conn.Close()
+	file, err := os.Create(fileName)
+	defer file.Close()
+	if err != nil {
+		// fmt.Println("os.Create err =", err)
+		return err
+	}
+
+	// 拿到数据
+	buf := make([]byte, 1024*10)
+	for {
+		n, err := conn.Read(buf)
+		if n == 0 || err == io.EOF {
+			// fmt.Println("Transfer Finish", err)
+			return io.EOF
+		}
+		if err != nil {
+			// fmt.Println("conn.Read err =", err)
+			return err
+		}
+		fmt.Printf("%s: %s", fileName, buf[:n])
+		file.Write(buf[:n])
 	}
 }

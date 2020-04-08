@@ -18,7 +18,7 @@ func main() {
 
 	slave := NewNode(233, SLAVE)
 	master1 := NewNode(4096, MASTER)
-	// replica := NewNode(4096, REPLICA)
+	replica := NewNode(4096, REPLICA)
 	replica1 := NewNode(4096, REPLICA1)
 
 	// fmt.Printf("client1 capacity: %d\n", client1.capacity)
@@ -35,11 +35,11 @@ func main() {
 		wg.Done()
 	}()
 
-	// wg.Add(1)
-	// go func() {
-	// 	replica.Run()
-	// 	wg.Done()
-	// }()
+	wg.Add(1)
+	go func() {
+		replica.Run()
+		wg.Done()
+	}()
 
 	wg.Add(1)
 	go func() {
@@ -49,9 +49,14 @@ func main() {
 	}()
 
 	if method == "SEND" || method == "send" {
+
 		var s string
-		s = fmt.Sprintf("%s%s", "list_", name)
-		file, _ := os.Open(s)
+		s = fmt.Sprintf("%s%s", "4_list_", name)
+		// slave.sendContentPage(s, "localhost:8989")
+		file, err := os.Open(s)
+		if err != nil {
+			fmt.Println(err)
+		}
 
 		defer file.Close()
 
@@ -62,6 +67,7 @@ func main() {
 			lines = append(lines, scanner.Text())
 			linecount++
 		}
+
 		for i := 0; i < len(lines); i++ {
 			var destination string
 			destination = slave.requestAddr(lines[i], "localhost:8989")
