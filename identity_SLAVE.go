@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"time"
@@ -209,6 +210,13 @@ func (self *slave) requestAddr(filePath string, masterdestination string) string
 }
 func (self *slave) requestReplica(filePath string, masterdestination string) string {
 	var destination string
+	file, err0 := os.Create("nullfile")
+	if err0 != nil {
+		fmt.Println(err0)
+
+	}
+	log.Println(file)
+	file.Close()
 
 	info, err := os.Stat(filePath)
 	if err != nil {
