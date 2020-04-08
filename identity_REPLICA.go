@@ -108,28 +108,63 @@ func (self *replica) Listen1(port string) error {
 			// fmt.Println("conn.Read err =", err1)
 			return err1
 		}
-		// if string(buf[:n]) == "SEND" {
+		if string(buf[:n]) == "RECEIVE" {
+			fmt.Println("Relica receive command: RECEIVE, FINDING TARGET FILE")
+			conn.Write([]byte("ok"))
+			n, err1 := conn.Read(buf)
+			if err1 != nil {
+				// fmt.Println("conn.Read err =", err1)
+				return err1
+			}
+			fileName := string(buf[:n])
+			fmt.Println("received message is:", fileName)
+			file, err := os.Open(fileName)
+			defer file.Close()
+			if err != nil {
+				// fmt.Println("os.Open err = ", err)
+				return err
+			}
+			buf := make([]byte, 1024*8)
+			for {
+				//  打开之后读取文件
+				n, err := file.Read(buf)
+				if err != nil {
+					// fmt.Println("fs.Open err = ", err)
+					return err
+				}
 
-		// n, err1 := conn.Read(buf)
-		// if err1 != nil {
-		// 	// fmt.Println("conn.Read err =", err1)
-		// 	return err1
-		// }
-		fileName := string(buf[:n])
-		// 返回ok
-		conn.Write([]byte("ok"))
-		// 接收文件,
-		err = self.recv1(fmt.Sprintf("received_%s", fileName), conn)
-		// } else if string(buf[:n]) == "RECEIVE" {
-		// n, err1 := conn.Read(buf)
-		// if err1 != nil {
-		// 	// fmt.Println("conn.Read err =", err1)
-		// 	return err1
-		// }
-		//fmt.Println("cannot do now")
+				//  发送文件
+				conn.Write(buf[:n])
+			}
+		} else {
+			fileName := string(buf[:n])
+			conn.Write([]byte("ok"))
+			err = self.recv1(fmt.Sprintf("received_from_client%s", fileName), conn)
+
+		}
 
 	}
+
+	// if string(buf[:n]) == "SEND" {
+
+	// n, err1 := conn.Read(buf)
+	// if err1 != nil {
+	// 	// fmt.Println("conn.Read err =", err1)
+	// 	return err1
 	// }
+	// fileName := string(buf[:n])
+	// 返回ok
+	// conn.Write([]byte("ok"))
+	// err = self.recv1(fmt.Sprintf("received_%s", fileName), conn)
+	// 		} else if string(buf[:n]) == "RECEIVE" {
+	// 		n, err1 := conn.Read(buf)
+	// 		if err1 != nil {
+	// 			// fmt.Println("conn.Read err =", err1)
+	// 			return err1
+	// 		}
+	// 		fmt.Println("received message is:",n)
+	// 		fmt.Println("cannot do now")
+
 }
 
 func (self *replica) recv1(fileName string, conn net.Conn) error {

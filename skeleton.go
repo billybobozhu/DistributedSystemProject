@@ -44,7 +44,6 @@ func main() {
 		slave.SendFile(name, destination)
 	} else if method == "RECEIVE" || method == "receive" {
 
-		fmt.Println("sorry currently we cannot support full function that")
 		var destination string
 		destination = slave.requestReplica(name, "localhost:8989")
 		slave.requestFile(name, destination)

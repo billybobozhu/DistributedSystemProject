@@ -265,14 +265,16 @@ func (self *slave) requestFile(fileName string, destination string) bool {
 	}
 	fmt.Println("receive status: ", string(buf[:n]))
 	if string(buf[:n]) == "ok" {
+		fmt.Printf("received ok and file requesting is %s \n", info.Name())
 		conn.Write([]byte(info.Name()))
 		time.Sleep(2 * time.Second)
+		err = self.recv(fmt.Sprintf("received_from_relica%s", info.Name()), conn)
 		// n, err2 := conn.Read(buf)
 		// if err2 != nil {
 		// 	// fmt.Println("conn.Read err = ", err2)
 		// 	fmt.Println(err2)
 		// }
-		self.recv(fmt.Sprintf("received_%s", fileName), conn)
+		// self.recv(fmt.Sprintf("received_%s", info.Name()), conn)
 	}
 
 	return false
