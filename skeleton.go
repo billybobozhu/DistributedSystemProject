@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"sync"
 )
 
@@ -41,15 +43,30 @@ func main() {
 
 	wg.Add(1)
 	go func() {
+
 		replica1.Run()
 		wg.Done()
 	}()
 
 	if method == "SEND" || method == "send" {
+		var s string
+		s = fmt.Sprintf("%s%s", "list_", name)
+		file, _ := os.Open(s)
 
-		var destination string
-		destination = slave.requestAddr(name, "localhost:8989")
-		slave.SendFile(name, destination)
+		defer file.Close()
+
+		var lines []string
+		linecount := 0
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			lines = append(lines, scanner.Text())
+			linecount++
+		}
+		for i := 0; i < len(lines); i++ {
+			var destination string
+			destination = slave.requestAddr(lines[i], "localhost:8989")
+			slave.SendFile(lines[i], destination)
+		}
 	} else if method == "RECEIVE" || method == "receive" {
 
 		var destination string
