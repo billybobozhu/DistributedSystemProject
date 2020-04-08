@@ -10,6 +10,9 @@ import (
 type replica struct {
 	capacity int
 }
+type replica1 struct {
+	capacity int
+}
 
 func (self *replica) CreateFile1(fileName string, content []byte) error {
 	file, err := os.Create(fileName)

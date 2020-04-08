@@ -11,4 +11,7 @@ const (
 
 	//REPLICA identifies this node is a replica
 	REPLICA identityType = 2
+
+	//REPLICA1 identifies this node is a replica
+	REPLICA1 identityType = 3
 )

@@ -17,6 +17,7 @@ func main() {
 	slave := NewNode(233, SLAVE)
 	master1 := NewNode(4096, MASTER)
 	replica := NewNode(4096, REPLICA)
+	replica1 := NewNode(4096, REPLICA1)
 
 	// fmt.Printf("client1 capacity: %d\n", client1.capacity)
 
@@ -37,6 +38,13 @@ func main() {
 		replica.Run()
 		wg.Done()
 	}()
+
+	wg.Add(1)
+	go func() {
+		replica1.Run()
+		wg.Done()
+	}()
+
 	if method == "SEND" || method == "send" {
 
 		var destination string
