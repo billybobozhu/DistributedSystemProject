@@ -3,9 +3,25 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strconv"
 	"sync"
 )
+
+func split(buf []byte, lim int) [][]byte {
+	var chunk []byte
+	chunks := make([][]byte, 0, len(buf)/lim+1)
+	for len(buf) >= lim {
+		chunk, buf = buf[:lim], buf[lim:]
+		chunks = append(chunks, chunk)
+	}
+	if len(buf) > 0 {
+		chunks = append(chunks, buf[:len(buf)])
+	}
+	//fmt.Println(len(chunks))
+	return chunks
+}
 
 func main() {
 	var method string
@@ -49,9 +65,31 @@ func main() {
 	}()
 
 	if method == "SEND" || method == "send" {
+		f, _ := os.Open(name)
+		var libname string
+		var subfile string
+		libname = fmt.Sprintf("%s%s", "list_", name)
+		fileObj, _ := os.OpenFile(libname, os.O_CREATE, 0644)
+		fileObj.Close()
+		bytes, _ := ioutil.ReadAll(f)
+
+		result := split(bytes, 50000)
+		for i := 0; i < len(result); i++ {
+			d1 := []byte(result[i])
+			subfile = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
+
+			err := ioutil.WriteFile(subfile, d1, 0644)
+			if err != nil {
+				fmt.Println(err)
+			}
+			fileObj1, _ := os.OpenFile(libname, os.O_APPEND, 0644)
+			fileObj1.Write([]byte(subfile))
+			fileObj1.Write([]byte("\n"))
+
+		}
 
 		var s string
-		s = fmt.Sprintf("%s%s", "4_list_", name)
+		s = fmt.Sprintf("%s%s", "list_", name)
 		// slave.sendContentPage(s, "localhost:8989")
 		file, err := os.Open(s)
 		if err != nil {
