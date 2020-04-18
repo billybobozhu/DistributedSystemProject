@@ -100,7 +100,10 @@ func (self *replica) Listen1(port string) error {
 	// 接受文件名
 	for {
 		conn, err := Server.Accept()
-		defer conn.Close()
+		defer func() {
+			conn.Close()
+			fmt.Println("connnction replica closed")
+		}()
 		if err != nil {
 			// fmt.Println("Server.Accept err =", err)
 			return err
@@ -120,25 +123,43 @@ func (self *replica) Listen1(port string) error {
 				return err1
 			}
 			fileName := string(buf[:n])
+			var storedName string
+			storedName = fmt.Sprintf("received_from_client%s", fileName)
 			fmt.Println("received message is:", fileName)
-			file, err := os.Open(fileName)
-			defer file.Close()
-			if err != nil {
-				// fmt.Println("os.Open err = ", err)
-				return err
-			}
-			buf := make([]byte, 1024*8)
-			for {
-				//  打开之后读取文件
-				n, err := file.Read(buf)
-				if err != nil {
-					// fmt.Println("fs.Open err = ", err)
-					return err
-				}
+			// file, err := os.Open(fileName)
+			// defer file.Close()
+			// if err != nil {
+			// 	// fmt.Println("os.Open err = ", err)
+			// 	return err
+			// }
+			err = self.send1(storedName, conn)
 
-				//  发送文件
-				conn.Write(buf[:n])
+			// buf := make([]byte, 1024*8)
+			// for {
+			// 	//  打开之后读取文件
+			// 	n, err := file.Read(buf)
+			// 	if err != nil {
+			// 		// fmt.Println("fs.Open err = ", err)
+			// 		return err
+			// 	}
+
+			// 	//  发送文件
+			// 	conn.Write(buf[:n])
+			//}
+		} else if string(buf[:n]) == "DELETE" {
+			fmt.Println("Relica receive command: DELETE, FINDING TARGET FILE")
+			conn.Write([]byte("ok"))
+			n, err1 := conn.Read(buf)
+			if err1 != nil {
+				// fmt.Println("conn.Read err =", err1)
+				return err1
 			}
+			fileName := string(buf[:n])
+			var storedName string
+			storedName = fmt.Sprintf("received_from_client%s", fileName)
+			fmt.Println("Deleting: ", fileName)
+			err = self.DeleteFile1(storedName)
+
 		} else {
 			fileName := string(buf[:n])
 			conn.Write([]byte("ok"))

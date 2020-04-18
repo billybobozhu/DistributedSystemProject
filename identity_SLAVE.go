@@ -265,10 +265,11 @@ func (self *slave) requestFile(fileName string, destination string) bool {
 	}
 
 	conn, err1 := net.Dial("tcp", destination)
-	defer conn.Close()
 	if err1 != nil {
 		fmt.Println(err1)
 	}
+	defer conn.Close()
+
 	conn.Write([]byte("RECEIVE"))
 	buf := make([]byte, 1024)
 	n, err2 := conn.Read(buf)
@@ -296,6 +297,86 @@ func (self *slave) requestFile(fileName string, destination string) bool {
 
 func (self *slave) sendContentPage(fileName string, destination string) bool {
 	self.SendFile(fileName, destination)
+	return false
+
+}
+
+func (self *slave) deleteFileCotentPage(filePath string, masterdestination string) string {
+	var destination string
+	file, err0 := os.Create("nullfile")
+	if err0 != nil {
+		fmt.Println(err0)
+
+	}
+	log.Println(file)
+	file.Close()
+
+	info, err := os.Stat(filePath)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn, err1 := net.Dial("tcp", "localhost:8989")
+	defer conn.Close()
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	conn.Write([]byte("DELETE"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		conn.Write([]byte(info.Name()))
+		time.Sleep(2 * time.Second)
+		n, err2 := conn.Read(buf)
+		if err2 != nil {
+			// fmt.Println("conn.Read err = ", err2)
+			fmt.Println(err2)
+		}
+		fmt.Printf("The address of replica server is %s \n", buf[:n])
+		destination = string(buf[:n])
+
+	}
+	return destination
+
+}
+func (self *slave) delete(fileName string, destination string) bool {
+	//var destination string
+
+	info, err := os.Stat(fileName)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	conn, err1 := net.Dial("tcp", destination)
+	if err1 != nil {
+		fmt.Println(err1)
+	}
+	defer conn.Close()
+
+	conn.Write([]byte("DELETE"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		// fmt.Println("conn.Read err = ", err2)
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		fmt.Printf("received ok and file requesting is %s \n", info.Name())
+		conn.Write([]byte(info.Name()))
+		// n, err2 := conn.Read(buf)
+		// if err2 != nil {
+		// 	// fmt.Println("conn.Read err = ", err2)
+		// 	fmt.Println(err2)
+		// }
+		// self.recv(fmt.Sprintf("received_%s", info.Name()), conn)
+	}
+
 	return false
 
 }

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -26,7 +27,7 @@ func split(buf []byte, lim int) [][]byte {
 func main() {
 	var method string
 	var name string
-	fmt.Printf("What do you want? PLEASE KEY IN SEND OR RECEIVE \n")
+	fmt.Printf("What do you want? PLEASE KEY IN SEND OR RECEIVE OR DELETE \n")
 	fmt.Scanln(&method) //Scanln 扫描来自标准输入的文本，将空格分隔的值依次存放到后续的参数内，直到碰到换行。
 	// fmt.Scanf("%s %s", &firstName, &lastName)    //Scanf与其类似，除了 Scanf 的第一个参数用作格式字符串，用来决定如何读取。
 	fmt.Printf("Enter File Name \n")
@@ -115,7 +116,48 @@ func main() {
 
 		var destination string
 		destination = slave.requestReplica(name, "localhost:8989")
-		slave.requestFile(name, destination)
+		fmt.Println(destination)
+		dest := strings.Split(destination, ",")
+		var length string
+		length = dest[0]
+		fmt.Println(length)
+		limit, _ := strconv.Atoi(length)
+		fmt.Println(dest[1])
+		var subfiles []string
+		for i := 0; i < limit; i++ {
+			var subfilename string
+			subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
+			fmt.Println(subfilename)
+			subfiles = append(subfiles, subfilename)
+			slave.requestFile(subfilename, dest[i+1])
+		}
+
+		Join(subfiles, fmt.Sprintf("%s%s", "received_from_replica_", name))
+
+		// slave.requestFile("1,a.txt", "localhost:7880")
+		// slave.requestFile("2,a.txt", "localhost:7878")
+		// slave.requestFile("3,a.txt", "localhost:7880")
+		// slave.requestFile("4,a.txt", "localhost:7880")
+
+	} else if method == "DELETE" || method == "delete" {
+		var destination string
+		destination = slave.deleteFileCotentPage(name, "localhost:8989")
+		fmt.Println(destination)
+		dest := strings.Split(destination, ",")
+		var length string
+		length = dest[0]
+		fmt.Println(length)
+		limit, _ := strconv.Atoi(length)
+		fmt.Println(dest[1])
+		var subfiles []string
+		for i := 0; i < limit; i++ {
+			var subfilename string
+			subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
+			fmt.Println(subfilename)
+			subfiles = append(subfiles, subfilename)
+			slave.delete(subfilename, dest[i+1])
+		}
+
 	}
 
 	// var content = []byte("OwO Hello I am some random file")
@@ -126,4 +168,24 @@ func main() {
 	wg.Wait()
 
 	fmt.Scanln()
+}
+func Join(filenames []string, targetfile string) {
+
+	f, err := os.Create(targetfile)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for i := 0; i < len(filenames); i++ {
+		m, err := os.Open(filenames[i])
+		if err != nil {
+			fmt.Println(err)
+		}
+		bytes, err := ioutil.ReadAll(m)
+		if err != nil {
+			fmt.Println(err)
+		}
+		f.Write(bytes)
+	}
+	f.Close()
+	fmt.Println("finish combined")
 }
