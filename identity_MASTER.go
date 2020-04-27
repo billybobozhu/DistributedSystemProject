@@ -11,37 +11,14 @@ import (
 	"strconv"
 	"strings"
 	"path"
+	"math/rand"
+	"time"
 )
 
 type master struct {
 	capacity int
 }
 
-
-//TODO:  BUILD AN ADDRESS LIST TO STORE THE ADDR OF REPLICA SERVER
-// var addressMap map[string]string //TODO:  BUILD AN ADDRESS MAP TO STORE THE METADATA OF FILES
-// func (self *master) initializeAddr() map[string]string {
-// 	addressMap := make(map[string]string, 100)
-
-// 	return addressMap
-
-// }
-// func (self *master) AddToMap(fileName string, ipaddress string) map[string]string {
-// 	self.addressMap[fileName] = ipaddress
-
-// 	return self.addressMap
-
-// }
-// func (self *master) FindAddr(fileName string, addressMap map[string]string) string {
-// 	var ipaddress string
-// 	// x, _ := addressMap[fileName] // found == true
-
-// 	if x, found := addressMap[fileName]; found {
-// 		ipaddress = x
-// 	}
-// 	return ipaddress
-
-// }
 var PathMaster ="/Users/liuzh/Downloads/DistributedSystemProject-bobozhu/master/"
 func (self *master) CreateFile(fileName string, content []byte) error {
 	//file, err := os.Create(fileName)
@@ -72,12 +49,10 @@ func (self *master) DeleteFile(fileName string) error {
 func (self *master) Listen(port string) error {
 
 	var chunknum int
+	Content := make(map[string]string,100)
 	addressMap := make(map[string]string, 100)
 	//chunkMap := make(map[string]string, 100)
 	var addr string
-
-	// balance1, _ := ioutil.ReadFile(path.Join(Path,"storage1.txt"))
-	// balance2, _ := ioutil.ReadFile(path.Join(Path,"storage2.txt"))
 	f1, _ := os.Open(path.Join(PathMaster,"storage1.txt"))
 	balance1, _ := ioutil.ReadAll(f1)
 	f2, _ := os.Open(path.Join(PathMaster,"storage2.txt"))
@@ -110,34 +85,18 @@ func (self *master) Listen(port string) error {
 			return err1
 		}
 		if string(buf[:n]) == "SEND" {
-			// buf1 := make([]byte, 1024)
-			// n, err1 := conn.Read(buf1)
-			// if err1 != nil {
-			// 	// fmt.Println("conn.Read err =", err1)
-			// 	return err1
-			// }
-			// // 拿到了文件的名字
-			// fileName := string(buf[:n])
-			// self.recv(fileName, c)
 			if load1 >= load2 {
 				addr = "localhost:7878"
 				load1 = load1 - 1
-				//file, _ := os.Create("storage1.txt")
-				// file, _ := os.Create(path.Join(Path,"storage1.txt"))
-				// file.Write([]byte(strconv.Itoa(load1)))
 				ioutil.WriteFile(path.Join(PathMaster,"storage1.txt"), []byte(strconv.Itoa(load1)), 0644)
 				chunknum = chunknum + 1
 
 			} else {
 				addr = "localhost:7880"
 				load2 = load2 - 1
-				//file, _ := os.Create("storage2.txt")
-				//file, _ := os.Create(path.Join(Path,"storage2.txt"))
-				//file.Write([]byte(strconv.Itoa(load2)))
 				ioutil.WriteFile(path.Join(PathMaster,"storage2.txt"), []byte(strconv.Itoa(load1)), 0644)
 				chunknum = chunknum + 1
 			}
-
 			fmt.Println("Master Method : SEND , Chunk Number: ", chunknum)
 
 			conn.Write([]byte("ok"))
@@ -148,41 +107,78 @@ func (self *master) Listen(port string) error {
 				return err1
 			}
 			fileName := string(buf[:n])
-			// var d string
-			// d = fmt.Sprintf("%s%s", "contentpage_", fileName)
+			fmt.Println("thisthis???",fileName)
 			ss := strings.Split(fileName, ",")
 			realname := ss[1]
 			fmt.Println(realname)
 			var f string
 			f = fmt.Sprintf("%s%s", realname, "_content.txt")
-			// see if the file existed or not
-			// Here allows to modify
+			// err3 := os.Remove(path.Join(PathMaster,f))
+			// if err3 != nil {
+			// 	fmt.Println(err3)
+			// }
+			seqN := fileName[:6]
+			fileName = fileName[6:]
+			fmt.Println("thisthis",fileName)
+			fmt.Println("seq",seqN,realname)
+			jsonFile, err := os.Open(path.Join(PathMaster,"Content.json"))
+			byteValue, _ := ioutil.ReadAll(jsonFile)
+			json.Unmarshal(byteValue, &Content)
+			seqnum, ok := Content[realname]
+			if (ok&&seqnum==seqN) || ok==false || Content[realname]=="free"{
+				if (ok&&seqnum==seqN){
+					chunknum = 1
+					err3 := os.Remove(path.Join(PathMaster,f))
+					if err3 != nil {
+						fmt.Println(err3)
+					}
+				}
+				Content[realname] = "free"
+				fmt.Println(Content)
+				out, _ := json.Marshal(Content)
+				_ = ioutil.WriteFile(path.Join(PathMaster,"Content.json"), out, 0755)
+				
+				if chunknum == 1 {
 
-			if chunknum == 1 {
+					//fileObj, _ := os.OpenFile(f, os.O_CREATE, 0644)
+					fileObj, _ := os.OpenFile(path.Join(PathMaster,f), os.O_CREATE, 0644)
+					var d string
+					d = fmt.Sprintf("%s%s", fileName, "\n")
 
-				//fileObj, _ := os.OpenFile(f, os.O_CREATE, 0644)
-				fileObj, _ := os.OpenFile(path.Join(PathMaster,f), os.O_CREATE, 0644)
-				var d string
-				d = fmt.Sprintf("%s%s", realname, "\n")
+					fileObj.Write([]byte(d))
+				}
+				//fileObj1, _ := os.OpenFile(f, os.O_APPEND, 0644)
+				fileObj1, _ := os.OpenFile(path.Join(PathMaster,f), os.O_WRONLY|os.O_APPEND, 0644)
+				defer fileObj1.Close()
+				_,err2:=fileObj1.Write([]byte(fileName+"\n"))
+				if err2 != nil {
+					fmt.Println(err)
+				}
+				//fileObj1.Write([]byte("\n"))
+				fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
+				conn.Write([]byte(addr))
 
-				fileObj.Write([]byte(d))
+				addressMap[fileName] = addr
+				var s string
+				s = fmt.Sprintf("%s%s", fileName, ".json")
+				out, _ = json.Marshal(addressMap)
+				_ = ioutil.WriteFile(path.Join(PathMaster,s), out, 0755)
+				Content[realname] = "free"
+				out, _ = json.Marshal(Content)
+				_ = ioutil.WriteFile(path.Join(PathMaster,"Content.json"), out, 0755)
+			}else{
+				fmt.Println("request denied, pls request later")
 			}
-			//fileObj1, _ := os.OpenFile(f, os.O_APPEND, 0644)
-			fileObj1, _ := os.OpenFile(path.Join(PathMaster,f), os.O_WRONLY|os.O_APPEND, 0644)
-			defer fileObj1.Close()
-			_,err2:=fileObj1.Write([]byte(fileName+"\n"))
-			if err2 != nil {
-				fmt.Println(err)
-			}
-			//fileObj1.Write([]byte("\n"))
-			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
-			conn.Write([]byte(addr))
 
-			addressMap[fileName] = addr
-			var s string
-			s = fmt.Sprintf("%s%s", fileName, ".json")
-			out, _ := json.Marshal(addressMap)
-			_ = ioutil.WriteFile(path.Join(PathMaster,s), out, 0755)
+			
+			// buf := make([]byte, 1024)
+			// n, err1 := conn.Read(buf)
+			// if err1 != nil {
+			// 	return err1
+			// }
+			// if string(buf[:n]) == "DONE"{
+
+			// }
 			//self.AddToMap(fileName, addr)
 
 		} else if string(buf[:n]) == "RECEIVE" {
@@ -196,8 +192,7 @@ func (self *master) Listen(port string) error {
 				return err1
 			}
 			fileName := string(buf[:n])
-			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
-			//here we need to find the correct content page for the file
+			fmt.Printf("Requesting file name is: %s \n", fileName) 
 			var contentPageName string
 			contentPageName = fmt.Sprintf("%s%s", fileName, "_content.txt")
 			fmt.Println(contentPageName)
@@ -227,7 +222,7 @@ func (self *master) Listen(port string) error {
 			if err != nil {
 				fmt.Println("Umarshal failed:", err)
 			}
-			fmt.Println("current addr mapping: ", addressMap)
+			// fmt.Println("current addr mapping: ", addressMap)
 			// }
 			var ipaddress string
 			var length int
@@ -250,23 +245,6 @@ func (self *master) Listen(port string) error {
 			finalTransmission = fmt.Sprintf("%s%s%s", strconv.Itoa(length), ",", addressBook)
 			fmt.Println("final trans message ：", finalTransmission)
 			conn.Write([]byte(finalTransmission))
-
-			// var s string
-			// s = fmt.Sprintf("%s %s", fileName, ".json")
-			// data, _ := ioutil.ReadFile(s)
-			// err := json.Unmarshal(data, &addressMap)
-			// if err != nil {
-
-			// 	fmt.Println("Umarshal failed:", err)
-
-			// }
-			// fmt.Println("current addr mapping: ", addressMap)
-			// var ipaddress string
-			// if x, found := addressMap[fileName]; found {
-			// 	ipaddress = x
-			// }
-
-			// conn.Write([]byte(ipaddress))
 
 		} else if string(buf[:n]) == "DELETE" {
 			fmt.Println("Master Method : DELETE")
@@ -280,6 +258,16 @@ func (self *master) Listen(port string) error {
 			fileName := string(buf[:n])
 			fmt.Printf("Requesting file name is: %s \n", fileName) // TODO: store the filename MD5 and replica server in a map
 			//here we need to find the correct content page for the file
+
+			jsonFile, err := os.Open(path.Join(PathMaster,"Content.json"))
+			byteValue, _ := ioutil.ReadAll(jsonFile)
+			json.Unmarshal(byteValue, &Content)
+
+			delete(Content,fileName)
+			out, _ := json.Marshal(Content)
+			_ = ioutil.WriteFile(path.Join(PathMaster,"Content.json"), out, 0755)
+			
+
 			var contentPageName string
 			contentPageName = fmt.Sprintf("%s%s", fileName, "_content.txt")
 			fmt.Println(contentPageName)
@@ -305,13 +293,13 @@ func (self *master) Listen(port string) error {
 			if err1 != nil {
 				fmt.Print(err1)
 			}
-			for i := 1; i < len(lines); i++ {
+			for i := 0; i < len(lines); i++ {
 				var s string
 				s = fmt.Sprintf("%s%s", lines[i], ".json")
 				os.Remove(path.Join(PathMaster,s))
 			}
 			file.Close()
-			err := json.Unmarshal(data, &addressMap)
+			err = json.Unmarshal(data, &addressMap)
 			if err != nil {
 
 				fmt.Println("Umarshal failed:", err)
@@ -332,10 +320,6 @@ func (self *master) Listen(port string) error {
 					length = length + 1
 
 				}
-				fmt.Println("aaaaaaaaaaa:", addressBook)
-
-				// fmt.Println(finalTransmission)
-
 			}
 
 			finalTransmission = fmt.Sprintf("%s%s%s", strconv.Itoa(length), ",", addressBook)
@@ -348,11 +332,86 @@ func (self *master) Listen(port string) error {
 				fmt.Println("The content page of the file is removed from MASTER")
 			}
 
-		}
-		// get file name
+		}else if string(buf[:n]) == "INVALID" {
+			fmt.Println("Master Method : INVALID")
+			conn.Write([]byte("ok"))
+			buf := make([]byte, 1024)
+			n, err1 := conn.Read(buf)
+			if err1 != nil {
+				// fmt.Println("conn.Read err =", err1)
+				return err1
+			}
+			fileName := string(buf[:n])
+			fmt.Println("Requesting file name is: ", fileName)
+			jsonFile, err := os.Open(path.Join(PathMaster,"Content.json"))
+			byteValue, _ := ioutil.ReadAll(jsonFile)
+			json.Unmarshal(byteValue, &Content)
+			fmt.Println("file status",Content[fileName])
+			if Content[fileName] == "free"{
+				seqN := fmt.Sprintf("%06v",rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(1000000))
+				conn.Write([]byte(seqN))
+				var contentPageName string
+				contentPageName = fmt.Sprintf("%s%s", fileName, "_content.txt")
+				fmt.Println(contentPageName)
+				file, err1 := os.Open(path.Join(PathMaster,contentPageName))
+				if err1 != nil {
+					fmt.Println(err)
+				}
+				defer file.Close()
+				var lines []string
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					lines = append(lines, scanner.Text())
+				}
+				fmt.Println(lines)
+				var addressBook string
+				var s string
+				s = fmt.Sprintf("%s%s", lines[len(lines)-1], ".json")
+				data, err1 := ioutil.ReadFile(path.Join(PathMaster,s))
+				if err1 != nil {
+					fmt.Print(err1)
+				}
+				file.Close()
+				err := json.Unmarshal(data, &addressMap)
+				if err != nil {
 
-		// 接收文件,
-		// err = self.recv(fmt.Sprintf("received_%s", fileName), conn)
+					fmt.Println("Umarshal failed:", err)
+
+				}
+				fmt.Println("current addr mapping: ", addressMap)
+				// }
+				var ipaddress string
+				var length int
+				var finalTransmission string
+				for i := 0; i < len(lines); i++ {
+
+					if x, found := addressMap[lines[i]]; found {
+						ipaddress = x
+						var temp string
+						temp = fmt.Sprintf("%s%s", ipaddress, ",")
+						addressBook = fmt.Sprintf("%s%s", addressBook, temp)
+						length = length + 1
+					}
+					// fmt.Println("addr:", addressBook)
+				}
+				finalTransmission = fmt.Sprintf("%s%s%s", strconv.Itoa(length), ",", addressBook)
+				fmt.Println("final trans message ：", finalTransmission)
+				conn.Write([]byte(finalTransmission))
+				Content[fileName] = seqN
+				out, _ := json.Marshal(Content)
+				_ = ioutil.WriteFile(path.Join(PathMaster,"Content.json"), out, 0755)
+				for i := 0; i < len(lines); i++ {
+					var s string
+					s = fmt.Sprintf("%s%s", lines[i], ".json")
+					os.Remove(path.Join(PathMaster,s))
+				}
+				fmt.Println("The content page of the file is INVALID from MASTER")
+
+			}else if Content[fileName] != "free"{
+				fmt.Println("request denied")
+				conn.Write([]byte("000000"))
+			}
+		}
 	}
 }
 

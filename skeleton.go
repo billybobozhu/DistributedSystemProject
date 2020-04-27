@@ -46,6 +46,7 @@ func main() {
 		master1.Run()
 		wg.Done()
 	}()
+
 	wg.Add(1)
 	go func() {
 		slave.Run()

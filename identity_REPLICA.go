@@ -17,54 +17,7 @@ type replica struct {
 type replica1 struct {
 	capacity int
 }
-// func (self *slave) requestAddr(filePath string, masterdestination string) string {
-// 	var destination string
 
-// 	info, err := os.Stat(filePath)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	conn, err1 := net.Dial("tcp", "localhost:8989")
-// 	defer conn.Close()
-// 	if err1 != nil {
-// 		fmt.Println(err1)
-// 	}
-
-// 	conn.Write([]byte(info.Name()))
-// 	buf := make([]byte, 1024*8)
-// 	n, err2 := conn.Read(buf)
-// 	if err2 != nil {
-// 		fmt.Println(err2)
-// 	}
-// 	fmt.Printf("The address of replica server is %s \n", buf[:n])
-// 	destination = string(buf[:n])
-
-// 	return destination
-// }
-
-//var Path string
-// func (self *replica) CreateFile1(fileName string, content []byte) error {
-	
-// 	//file, err := os.Create(fileName)
-// 	file, err := os.Create(path.Join(Path,fileName))
-// 	if err != nil {
-// 		// fmt.Println(err)
-// 		return err
-// 	}
-// 	// err := ioutil.WriteFile(fileName, content, 0777)
-// 	// if err != nil{
-// 	// 	fmt.Println(err)
-// 	// }
-// 	n, err := file.Write(content)
-// 	if err == nil && n < len(content) {
-// 		err = io.ErrShortWrite
-// 	}
-// 	if closeErr := file.Close(); err == nil {
-// 		err = closeErr
-// 	}
-// 	return err
-// }
 
 func (self *replica) DeleteFile1(fileName string,Path string) error {
 	//err := os.Remove(fileName)
@@ -133,7 +86,7 @@ func (self *replica) Listen1(port string,replicaid int) error {
 	}else{
 		Path=PathStorage2
 	}
-	fmt.Println("paththththt",Path)
+	//fmt.Println("paththththt",Path)
 	Server, err := net.Listen("tcp", port)
 	if err != nil {
 		// fmt.Println("net.Listen err =", err)
@@ -169,26 +122,7 @@ func (self *replica) Listen1(port string,replicaid int) error {
 			var storedName string
 			storedName = fileName
 			fmt.Println("received message is:", fileName)
-			// file, err := os.Open(fileName)
-			// defer file.Close()
-			// if err != nil {
-			// 	// fmt.Println("os.Open err = ", err)
-			// 	return err
-			// }
 			err = self.send1(storedName,Path, conn)
-
-			// buf := make([]byte, 1024*8)
-			// for {
-			// 	//  打开之后读取文件
-			// 	n, err := file.Read(buf)
-			// 	if err != nil {
-			// 		// fmt.Println("fs.Open err = ", err)
-			// 		return err
-			// 	}
-
-			// 	//  发送文件
-			// 	conn.Write(buf[:n])
-			//}
 		} else if string(buf[:n]) == "DELETE" {
 			fmt.Println("Relica receive command: DELETE, FINDING TARGET FILE")
 			conn.Write([]byte("ok"))
@@ -221,7 +155,7 @@ func (self *replica) recv1(fileName string,Path string, conn net.Conn) error {
 	defer conn.Close()
 	//file, err := os.Create(fileName)
 	//fmt.Println(path.Join(PathSlave,fileName))
-	fmt.Println("Rrrrrrrrrrrrr",Path)
+	// fmt.Println("Rrrrrrrrrrrrr",Path)
 	file, err := os.Create(path.Join(Path,fileName))
 	defer file.Close()
 	if err != nil {

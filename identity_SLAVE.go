@@ -17,45 +17,14 @@ import (
 type slave struct {
 	capacity int
 }
+var seqC map[string]string
 
-// func (self *slave) requestAddr(filePath string, masterdestination string) string {
-// 	var destination string
-
-// 	info, err := os.Stat(filePath)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-
-// 	conn, err1 := net.Dial("tcp", "localhost:8989")
-// 	defer conn.Close()
-// 	if err1 != nil {
-// 		fmt.Println(err1)
-// 	}
-
-// 	conn.Write([]byte(info.Name()))
-// 	buf := make([]byte, 1024*8)
-// 	n, err2 := conn.Read(buf)
-// 	if err2 != nil {
-// 		fmt.Println(err2)
-// 	}
-// 	fmt.Printf("The address of replica server is %s \n", buf[:n])
-// 	destination = string(buf[:n])
-
-// 	return destination
-// }
-var PathSlave ="/Users/liuzh/Downloads/DistributedSystemProject-bobozhu/slave/"
+var PathSlave = "/Users/liuzh/Downloads/DistributedSystemProject-bobozhu/slave/"
 func (self *slave) CreateFile(fileName string, content []byte) error {
-	
-	//file, err := os.Create(fileName)
 	file, err := os.Create(path.Join(PathSlave,fileName))
 	if err != nil {
-		// fmt.Println(err)
 		return err
 	}
-	// err := ioutil.WriteFile(fileName, content, 0777)
-	// if err != nil{
-	// 	fmt.Println(err)
-	// }
 	n, err := file.Write(content)
 	if err == nil && n < len(content) {
 		err = io.ErrShortWrite
@@ -118,7 +87,6 @@ func (self *slave) CutFile(name string) {
 	for i := 0; i < len(result); i++ {
 		d1 := []byte(result[i])
 		subfile = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
-
 		err := ioutil.WriteFile(path.Join(PathSlave,subfile), d1, 0644)
 		if err != nil {
 			fmt.Println(err)
@@ -163,7 +131,10 @@ func (self *slave) CutFile(name string) {
 		//slave.SendFile(lines[i], destination)
 		fmt.Println("test",lines[i],destination)
 		self.SendFile(lines[i],destination)
+		err = os.Remove(path.Join(PathSlave,lines[i]))
 	}
+	time.Sleep(2000)
+	err = os.Remove(path.Join(PathSlave,s))
 }
 func (self *slave) send(filePath string, conn net.Conn) error {
 	defer conn.Close()
@@ -185,6 +156,8 @@ func (self *slave) send(filePath string, conn net.Conn) error {
 		//  发送文件
 		conn.Write(buf[:n])
 	}
+	err=os.Remove(path.Join(PathSlave,filePath))
+	return err
 }
 
 func (self *slave) Listen(port string) error {
@@ -220,8 +193,6 @@ func (self *slave) Listen(port string) error {
 
 func (self *slave) recv(fileName string, conn net.Conn) error {
 	defer conn.Close()
-	//file, err := os.Create(fileName)
-	//fmt.Println(path.Join(PathSlave,fileName))
 	file, err := os.Create(path.Join(PathSlave,fileName))
 	defer file.Close()
 	if err != nil {
@@ -264,27 +235,49 @@ func (self *slave) requestAddr(filePath string, masterdestination string) string
 	}
 	conn.Write([]byte("SEND"))
 
-	// var s string
-	// s = fmt.Sprintf("%s%s", "list_", info.Name())
-	// conn.Write([]byte(s))
-	// self.sendContentPage(s, "localhost:8989")
 	buf := make([]byte, 1024)
 	n, err2 := conn.Read(buf)
 	if err2 != nil {
-		// fmt.Println("conn.Read err = ", err2)
 		fmt.Println(err2)
 	}
 	fmt.Println("receive status: ", string(buf[:n]))
 	if string(buf[:n]) == "ok" {
-		conn.Write([]byte(info.Name()))
-
+		realName:=strings.Split(info.Name(),",")
+		//fmt.Println("?????????????",info.Name(),seqC)
+		seqnum, ok := seqC[realName[1]]
+	    if (ok) {
+	        conn.Write([]byte(seqnum+info.Name()))
+	    } else {
+	        conn.Write([]byte("999999"+info.Name()))
+	    }
+		//conn.Write([]byte(info.Name()))
+		//Check validation
+		time.Sleep(2 * time.Second)
+		buf := make([]byte, 1024)
 		n, err2 := conn.Read(buf)
 		if err2 != nil {
-			// fmt.Println("conn.Read err = ", err2)
 			fmt.Println(err2)
 		}
-		fmt.Printf("The address of replica server is %s \n", buf[:n])
+		fmt.Println(string(buf[:n]))
 		destination = string(buf[:n])
+		// if !string(buf[:n]) || string(buf[:n])[:6] != "000000"{
+		// 	if string(buf[:n])!=""{
+		// 		fmt.Println(string(buf[:n])[:6])
+		// 		seq[filePath]=string(buf[:n])[:6]
+		// 		destination = string(buf[:n])[6:]
+		// 	}else{
+				
+		// 	}
+		// 	// buf := make([]byte, 1024)
+		// 	// n, err2 = conn.Read(buf)
+		// 	// if err2 != nil {
+		// 	// 	fmt.Println(err2)
+		// 	// }
+			
+		// 	fmt.Printf("The address of replica server is %s \n", destination)
+		// }else if string(buf[:n]) == "000000"{
+		// 	fmt.Printf("The request is denied from master, try again later")
+		// }
 
 	}
 	return destination
@@ -307,7 +300,6 @@ func (self *slave) request(name string){
 		//subfiles = append(subfiles, subfilename)
 		subfiles = append(subfiles,subfilename)
 		//fmt.Println(path.Join(filePath,subfilename))
-		fmt.Println(subfiles)
 		self.requestFile(subfilename, dest[i+1])
 	}
 	file, _ := os.Create(path.Join(PathSlave,name))
@@ -335,12 +327,6 @@ func (self *slave) requestReplica(filePath string, masterdestination string) str
 	log.Println(file)
 	file.Close()
 
-	//info, err := os.Stat(filePath)
-	//info, err := os.Stat(path.Join(PathSlave,filePath))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
 	conn, err1 := net.Dial("tcp", masterdestination)
 	defer conn.Close()
 	if err1 != nil {
@@ -365,19 +351,10 @@ func (self *slave) requestReplica(filePath string, masterdestination string) str
 		}
 		fmt.Printf("The address of replica server is %s \n", buf[:n])
 		destination = string(buf[:n])
-
 	}
 	return destination
-
 }
 func (self *slave) requestFile(fileName string, destination string) bool {
-	//var destination string
-
-	// info, err := os.Stat(path.Join(PathSlave,fileName))
-	// // info, err := os.Create(path.Join(PathSlave,fileName))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
 	conn, err1 := net.Dial("tcp", destination)
 	if err1 != nil {
 		fmt.Println(err1)
@@ -393,24 +370,15 @@ func (self *slave) requestFile(fileName string, destination string) bool {
 	}
 	fmt.Println("receive status: ", string(buf[:n]))
 	if string(buf[:n]) == "ok" {
-		//fmt.Printf("received ok and file requesting is %s \n", info.Name())
 		fmt.Printf("received ok and file requesting is %s \n", fileName)
 		//conn.Write([]byte(info.Name()))
 		conn.Write([]byte(fileName))
 		time.Sleep(2 * time.Second)
 		err := self.recv(fileName, conn)
-		fmt.Println("filemaennmmm",fileName)
 		if err != nil {
 			fmt.Println(err)
 		}
-		// n, err2 := conn.Read(buf)
-		// if err2 != nil {
-		// 	// fmt.Println("conn.Read err = ", err2)
-		// 	fmt.Println(err2)
-		// }
-		// self.recv(fmt.Sprintf("received_%s", info.Name()), conn)
 	}
-
 	return false
 
 }
@@ -426,15 +394,9 @@ func (self *slave) deleteFileCotentPage(filePath string, masterdestination strin
 	file, err0 := os.Create(path.Join(PathSlave,"nullfile"))
 	if err0 != nil {
 		fmt.Println(err0)
-
 	}
 	log.Println(file)
 	file.Close()
-
-	// info, err := os.Stat(path.Join(PathSlave,filePath))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
 	conn, err1 := net.Dial("tcp", "localhost:8989")
 	defer conn.Close()
 	if err1 != nil {
@@ -459,19 +421,11 @@ func (self *slave) deleteFileCotentPage(filePath string, masterdestination strin
 		}
 		fmt.Printf("The address of replica server is %s \n", buf[:n])
 		destination = string(buf[:n])
-
 	}
 	return destination
 
 }
 func (self *slave) delete(fileName string, destination string) bool {
-	//var destination string
-
-	// info, err := os.Stat(path.Join(PathSlave,fileName))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
 	conn, err1 := net.Dial("tcp", destination)
 	if err1 != nil {
 		fmt.Println(err1)
@@ -482,57 +436,101 @@ func (self *slave) delete(fileName string, destination string) bool {
 	buf := make([]byte, 1024)
 	n, err2 := conn.Read(buf)
 	if err2 != nil {
-		// fmt.Println("conn.Read err = ", err2)
 		fmt.Println(err2)
 	}
 	fmt.Println("receive status: ", string(buf[:n]))
 	if string(buf[:n]) == "ok" {
-		//fmt.Printf("received ok and file requesting is %s \n", info.Name())
-		//conn.Write([]byte(info.Name()))
 		conn.Write([]byte(fileName))
-		// n, err2 := conn.Read(buf)
-		// if err2 != nil {
-		// 	// fmt.Println("conn.Read err = ", err2)
-		// 	fmt.Println(err2)
-		// }
-		// self.recv(fmt.Sprintf("received_%s", info.Name()), conn)
 	}
 
 	return false
 
 }
 
-func (self *slave)modify(name string){
-	self.request(name)
+func (self *slave) Invalid_request(filePath string, masterdestination string) string {
 	var destination string
-	destination = self.deleteFileCotentPage(name, "localhost:8989")
-	fmt.Println(destination)
-	dest := strings.Split(destination, ",")
-	var length string
-	length = dest[0]
-	fmt.Println(length)
-	limit, _ := strconv.Atoi(length)
-	fmt.Println(dest[1])
-	var subfiles []string
-	for i := 0; i < limit; i++ {
-		var subfilename string
-		subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
-		fmt.Println(subfilename)
-		subfiles = append(subfiles, subfilename)
-		self.delete(subfilename, dest[i+1])
+	file, err0 := os.Create(path.Join(PathSlave,"nullfile"))
+	if err0 != nil {
+		fmt.Println(err0)
 	}
-	fmt.Printf("Please type 'SUBMIT' after finish editing\n")
-	input := bufio.NewScanner(os.Stdin)
-	input.Scan()
-	if input.Text()=="SUBMIT"{
-		self.CutFile(name)
+	log.Println(file)
+	file.Close()
+	conn, err1 := net.Dial("tcp", "localhost:8989")
+	defer conn.Close()
+	if err1 != nil {
+		fmt.Println(err1)
 	}
+	conn.Write([]byte("INVALID"))
+	buf := make([]byte, 1024)
+	n, err2 := conn.Read(buf)
+	if err2 != nil {
+		fmt.Println(err2)
+	}
+	fmt.Println("receive status: ", string(buf[:n]))
+	if string(buf[:n]) == "ok" {
+		//conn.Write([]byte(info.Name()))
+		conn.Write([]byte(filePath))
+		time.Sleep(2 * time.Second)
+		buf := make([]byte, 1024)
+		n, err2 := conn.Read(buf)
+		if err2 != nil {
+			fmt.Println(err2)
+		}
+		msg:=strings.Split(string(buf[:n]), ",")
+		fmt.Println("msgsss",msg)
+		if msg[0] != string(000000){
+			seqC[filePath]=msg[0]
+			fmt.Println("sequences numbbber ",msg[0])
+			// buf := make([]byte, 1024)
+			// n, err2 = conn.Read(buf)
+			// if err2 != nil {
+			// 	fmt.Println(err2)
+			// }
+			destination = msg[1]
+			fmt.Printf("The address of replica server is %s \n", destination)
+		}else if string(buf[:n]) == string(000000){
+			fmt.Printf("The request is denied from master, try again later")
+		}
+		
+	}
+	return destination
+
+}
+
+
+func (self *slave)modify(name string){
+	var destination string
+	destination = self.Invalid_request(name, "localhost:8989")
+	if destination != ""{
+		self.request(name)
+		dest := strings.Split(destination, ",")
+		var length string
+		length = dest[0]
+		fmt.Println(length)
+		limit, _ := strconv.Atoi(length)
+
+		var subfiles []string
+		for i := 0; i < limit; i++ {
+			var subfilename string
+			subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
+			subfiles = append(subfiles, subfilename)
+			self.delete(subfilename, dest[i+1])
+		}
+		time.Sleep(1000)
+		fmt.Printf("Please type 'SUBMIT' after finish editing\n")
+		input := bufio.NewScanner(os.Stdin)
+		input.Scan()
+		if input.Text()=="SUBMIT"{
+			self.CutFile(name)
+		}
+	}
+	
 
 }
 func (self *slave)append(name string){
 	self.request(name)
 	var destination string
-	destination = self.deleteFileCotentPage(name, "localhost:8989")
+	destination = self.Invalid_request(name, "localhost:8989")
 	fmt.Println(destination)
 	dest := strings.Split(destination, ",")
 	var length string
@@ -544,7 +542,7 @@ func (self *slave)append(name string){
 	for i := 0; i < limit; i++ {
 		var subfilename string
 		subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
-		fmt.Println(subfilename)
+		fmt.Println("SubfileName:",subfilename)
 		subfiles = append(subfiles, subfilename)
 		self.delete(subfilename, dest[i+1])
 	}
@@ -578,5 +576,6 @@ func (self *slave)split(buf []byte, lim int) [][]byte {
 }
 
 func (self *slave) SlaveMain(){
+	seqC = make(map[string]string)
 	go self.Listen("localhost:7879")
 }
