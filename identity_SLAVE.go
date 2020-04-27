@@ -19,7 +19,7 @@ type slave struct {
 }
 var seqC map[string]string
 
-var PathSlave = "/Users/liuzh/Downloads/DistributedSystemProject-bobozhu/slave/"
+var PathSlave = "/Users/liuzh/Desktop/Git/DistributedSystemProject-bobozhu/slave/"
 func (self *slave) CreateFile(fileName string, content []byte) error {
 	file, err := os.Create(path.Join(PathSlave,fileName))
 	if err != nil {
@@ -528,36 +528,36 @@ func (self *slave)modify(name string){
 
 }
 func (self *slave)append(name string){
-	self.request(name)
 	var destination string
 	destination = self.Invalid_request(name, "localhost:8989")
-	fmt.Println(destination)
-	dest := strings.Split(destination, ",")
-	var length string
-	length = dest[0]
-	fmt.Println(length)
-	limit, _ := strconv.Atoi(length)
-	fmt.Println(dest[1])
-	var subfiles []string
-	for i := 0; i < limit; i++ {
-		var subfilename string
-		subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
-		fmt.Println("SubfileName:",subfilename)
-		subfiles = append(subfiles, subfilename)
-		self.delete(subfilename, dest[i+1])
+	if destination != ""{
+		self.request(name)
+		dest := strings.Split(destination, ",")
+		var length string
+		length = dest[0]
+		fmt.Println(length)
+		limit, _ := strconv.Atoi(length)
+		var subfiles []string
+		for i := 0; i < limit; i++ {
+			var subfilename string
+			subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
+			fmt.Println("SubfileName:",subfilename)
+			subfiles = append(subfiles, subfilename)
+			self.delete(subfilename, dest[i+1])
+		}
+		fmt.Printf("Please type in file name you want append\n")
+		var addName string
+		fmt.Scanln(&addName)
+		file, _:= os.OpenFile(path.Join(PathSlave,name), os.O_WRONLY|os.O_APPEND, 0644)
+		defer file.Close()
+		f, _ := os.Open(path.Join(PathSlave,addName))
+		bytes, _ := ioutil.ReadAll(f)
+		_,err1:=file.Write(bytes)
+		if err1!=nil{
+			fmt.Println(err1)
+		}
+		self.CutFile(name)
 	}
-	fmt.Printf("Please type in file name you want append\n")
-	var addName string
-	fmt.Scanln(&addName)
-	file, _:= os.OpenFile(path.Join(PathSlave,name), os.O_WRONLY|os.O_APPEND, 0644)
-	defer file.Close()
-	f, _ := os.Open(path.Join(PathSlave,addName))
-	bytes, _ := ioutil.ReadAll(f)
-	_,err1:=file.Write(bytes)
-	if err1!=nil{
-		fmt.Println(err1)
-	}
-	self.CutFile(name)
 }
 
 

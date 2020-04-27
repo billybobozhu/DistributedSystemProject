@@ -19,7 +19,7 @@ type master struct {
 	capacity int
 }
 
-var PathMaster ="/Users/liuzh/Downloads/DistributedSystemProject-bobozhu/master/"
+var PathMaster ="/Users/liuzh/Desktop/Git/DistributedSystemProject-bobozhu/master"
 func (self *master) CreateFile(fileName string, content []byte) error {
 	//file, err := os.Create(fileName)
 	file, err := os.Create(path.Join(PathMaster,fileName))
@@ -125,9 +125,11 @@ func (self *master) Listen(port string) error {
 			byteValue, _ := ioutil.ReadAll(jsonFile)
 			json.Unmarshal(byteValue, &Content)
 			seqnum, ok := Content[realname]
+			fmt.Println(seqnum)
 			if (ok&&seqnum==seqN) || ok==false || Content[realname]=="free"{
 				if (ok&&seqnum==seqN){
 					chunknum = 1
+					addressMap = make(map[string]string, 100)
 					err3 := os.Remove(path.Join(PathMaster,f))
 					if err3 != nil {
 						fmt.Println(err3)
