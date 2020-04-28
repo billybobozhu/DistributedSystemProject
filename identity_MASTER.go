@@ -351,7 +351,7 @@ func (self *master) Listen(port string) error {
 			fmt.Println("file status",Content[fileName])
 			if Content[fileName] == "free"{
 				seqN := fmt.Sprintf("%06v",rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(1000000))
-				conn.Write([]byte(seqN))
+				conn.Write([]byte(seqN+" "))
 				var contentPageName string
 				contentPageName = fmt.Sprintf("%s%s", fileName, "_content.txt")
 				fmt.Println(contentPageName)

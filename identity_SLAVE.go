@@ -426,6 +426,7 @@ func (self *slave) deleteFileCotentPage(filePath string, masterdestination strin
 
 }
 func (self *slave) delete(fileName string, destination string) bool {
+	fmt.Println("here delete")
 	conn, err1 := net.Dial("tcp", destination)
 	if err1 != nil {
 		fmt.Println(err1)
@@ -438,7 +439,7 @@ func (self *slave) delete(fileName string, destination string) bool {
 	if err2 != nil {
 		fmt.Println(err2)
 	}
-	fmt.Println("receive status: ", string(buf[:n]))
+	fmt.Println("DELETE receive status: ", string(buf[:n]))
 	if string(buf[:n]) == "ok" {
 		conn.Write([]byte(fileName))
 	}
@@ -476,7 +477,7 @@ func (self *slave) Invalid_request(filePath string, masterdestination string) st
 		if err2 != nil {
 			fmt.Println(err2)
 		}
-		msg:=strings.Split(string(buf[:n]), ",")
+		msg:=strings.Split(string(buf[:n]), " ")
 		fmt.Println("msgsss",msg)
 		if msg[0] != string(000000){
 			seqC[filePath]=msg[0]
@@ -508,12 +509,14 @@ func (self *slave)modify(name string){
 		length = dest[0]
 		fmt.Println(length)
 		limit, _ := strconv.Atoi(length)
+		fmt.Println("llllmit",limit)
 
 		var subfiles []string
 		for i := 0; i < limit; i++ {
 			var subfilename string
 			subfilename = fmt.Sprintf("%s%s%s", strconv.Itoa(i+1), ",", name)
 			subfiles = append(subfiles, subfilename)
+			fmt.Println("here here",subfilename, dest[i],dest[i+1])
 			self.delete(subfilename, dest[i+1])
 		}
 		time.Sleep(1000)
